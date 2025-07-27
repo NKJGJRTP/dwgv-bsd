@@ -1,0 +1,65 @@
+import cv2
+import numpy as np
+
+# --- Настройки ---
+DP = 1.2
+MIN_DIST = 40
+PARAM1 = 100
+PARAM2 = 50  # Увеличим param2 для лучшей стабильности
+MIN_RADIUS = 20
+MAX_RADIUS = 60
+
+# --- Инициализация ---
+cap = cv2.VideoCapture(0)
+
+print("Запущен Пельмени-Сканер 3000!")
+print("Нажми Q, чтобы выйти.")
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        print("Ошибка камеры")
+        break
+
+    # Копия для рисования
+    output = frame.copy()
+
+    # Готовим изображение: серый + размытие
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    gray = cv2.medianBlur(gray, 5)
+
+    # Гистограмма равномерного распределения
+    gray = cv2.equalizeHist(gray)
+
+    # Ищем круги (пельмени)
+    circles = cv2.HoughCircles(
+        gray, cv2.HOUGH_GRADIENT, dp=DP, minDist=MIN_DIST,
+        param1=PARAM1, param2=PARAM2,
+        minRadius=MIN_RADIUS, maxRadius=MAX_RADIUS
+    )
+
+    count = 0
+    if circles is not None:
+        circles = np.uint16(np.around(circles))
+        for (x, y, r) in circles[0]:
+            cv2.circle(output, (x, y), r, (0, 255, 0), 3)  # Зелёный круг
+            cv2.circle(output, (x, y), 2, (0, 0, 255), 3)  # Центр
+            count += 1
+
+    # Выводим количество пельменей
+    cv2.putText(output, f"Пельменей: {count}", (30, 60),
+                cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 4)
+
+    # Рамка по краям экрана
+    cv2.rectangle(output, (10, 10), (630, 470), (0, 0, 0), 5)
+
+    # Отображение
+    cv2.imshow('Пельмени Сканер 3000', output)
+
+    # Выход по клавише 'q'
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        print("Выход.")
+        break
+
+cap.release()
+cv2.destroyAllWindows()
